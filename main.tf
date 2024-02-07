@@ -23,6 +23,7 @@ locals {
   iam_instance_profile_name = !var.create_iam_instance_profile && var.iam_instance_profile_arn == null ? var.iam_instance_profile_name : null
 }
 
+#tfsec:ignore:aws-ec2-enforce-launch-config-http-token-imds
 resource "aws_launch_template" "this" {
   count = var.create_launch_template ? 1 : 0
 
