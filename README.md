@@ -3,7 +3,6 @@
 # Terraform AWS Cloud EC2-Autoscaling Module
 
 ## Table of Contents
-
 - [Introduction](#introduction)
 - [Examples](#Examples)
 - [Usage](#usage)
