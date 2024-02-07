@@ -8,17 +8,17 @@ locals {
   name        = "app"
   environment = "test"
   region      = "eu-west-1"
-#  azs         = slice(data.aws_availability_zones.available.names, 0, 3)
+  #  azs         = slice(data.aws_availability_zones.available.names, 0, 3)
 
   tags = {
     Example = local.name
 
   }
 
-#  user_data = <<-EOT
-#    #!/bin/bash
-#    echo "Hello Terraform!"
-#  EOT
+  #  user_data = <<-EOT
+  #    #!/bin/bash
+  #    echo "Hello Terraform!"
+  #  EOT
 }
 
 
