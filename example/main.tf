@@ -21,7 +21,6 @@ locals {
   #  EOT
 }
 
-
 module "vpc" {
   source      = "cypik/vpc/aws"
   version     = "1.0.1"
@@ -41,7 +40,6 @@ module "subnets" {
   igw_id              = module.vpc.igw_id
   cidr_block          = module.vpc.vpc_cidr_block
 }
-
 
 module "security_group" {
   source      = "cypik/security-group/aws"
@@ -75,9 +73,6 @@ module "security_group" {
   ]
 }
 
-################################################################################
-# Complete
-################################################################################
 
 data "aws_ssm_parameter" "ecs_optimized_ami" {
   name = "/aws/service/ecs/optimized-ami/amazon-linux-2/recommended"
