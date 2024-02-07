@@ -137,7 +137,7 @@ Your Name Replace **MIT** and **Cypik** with the appropriate license and your in
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.35.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.32.1 |
 
 ## Modules
 
