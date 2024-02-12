@@ -124,7 +124,7 @@ For detailed examples on how to use this module, please refer to the '[example](
 Your Name Replace **MIT** and **Cypik** with the appropriate license and your information. Feel free to expand this README with additional details or usage instructions as needed for your specific use case.
 
 ## License
-**This project is licensed under the** MIT **License - see the [LICENSE](https://github.com/cypik/terraform-aws-ec2-autoscaling/master/LICENSE) file for details.**
+This project is licensed under the **MIT** License - see the [LICENSE](https://github.com/cypik/terraform-aws-ec2-autoscaling/master/LICENSE) file for details.
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
