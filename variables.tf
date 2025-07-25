@@ -1,8 +1,46 @@
+#Module      : LABEL
+#Description : Terraform label module variables
+variable "name" {
+  type        = string
+  default     = ""
+  description = "Name  (e.g. `app` or `cluster`)."
+}
+
+variable "repository" {
+  type        = string
+  default     = "https://github.com/cypik/terraform-aws-lambda"
+  description = "Terraform current module repo"
+}
+
+variable "environment" {
+  type        = string
+  default     = ""
+  description = "Environment (e.g. `prod`, `dev`, `staging`)."
+}
+
+variable "label_order" {
+  type        = list(any)
+  default     = ["name", "environment"]
+  description = "Label order, e.g. `name`,`application`."
+}
+
+variable "attributes" {
+  type        = list(any)
+  default     = []
+  description = "Additional attributes (e.g. `1`)."
+}
+
+variable "managedby" {
+  type        = string
+  default     = "hello@cypik.com"
+  description = "ManagedBy, eg 'cypik'."
+}
+
 ################################################################################
 # Autoscaling group
 ################################################################################
 
-variable "create" {
+variable "enable" {
   description = "Determines whether to create autoscaling group or not"
   type        = bool
   default     = true
@@ -12,12 +50,6 @@ variable "ignore_desired_capacity_changes" {
   description = "Determines whether the `desired_capacity` value is ignored after initial apply. See README note for more details"
   type        = bool
   default     = false
-}
-
-variable "name" {
-  description = "Name used across the resources created"
-  type        = string
-  default     = ""
 }
 
 variable "use_name_prefix" {
@@ -306,7 +338,7 @@ variable "ignore_failed_scaling_activities" {
 # Launch template
 ################################################################################
 
-variable "create_launch_template" {
+variable "enable_launch_template" {
   description = "Determines whether to create launch template or not"
   type        = bool
   default     = true
@@ -454,7 +486,7 @@ variable "tag_specifications" {
 # Autoscaling group schedule
 ################################################################################
 
-variable "create_schedule" {
+variable "enable_schedule" {
   description = "Determines whether to create autoscaling group schedule or not"
   type        = bool
   default     = true
@@ -470,7 +502,7 @@ variable "schedules" {
 # Autoscaling policy
 ################################################################################
 
-variable "create_scaling_policy" {
+variable "enable_scaling_policy" {
   description = "Determines whether to create target scaling policy schedule or not"
   type        = bool
   default     = true
@@ -486,7 +518,7 @@ variable "scaling_policies" {
 # IAM Role / Instance Profile
 ################################################################################
 
-variable "create_iam_instance_profile" {
+variable "enable_iam_instance_profile" {
   description = "Determines whether an IAM instance profile is created or to use an existing IAM instance profile"
   type        = bool
   default     = false
