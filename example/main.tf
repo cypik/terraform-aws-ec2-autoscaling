@@ -2,18 +2,11 @@ provider "aws" {
   region = local.region
 }
 
-data "aws_availability_zones" "available" {}
-
 locals {
   name        = "app"
   environment = "test"
   region      = "eu-west-2"
-  azs         = slice(data.aws_availability_zones.available.names, 0, 3)
 
-  tags = {
-    Example = local.name
-
-  }
 
   user_data = <<-EOT
     #!/bin/bash
@@ -98,7 +91,7 @@ module "autoscaling" {
         cat <<'EOF' >> /etc/ecs/ecs.config
         ECS_CLUSTER=${local.name}
         ECS_LOGLEVEL=debug
-        ECS_CONTAINER_INSTANCE_TAGS=${jsonencode(local.tags)}
+        ECS_CONTAINER_INSTANCE_TAGS=${jsonencode(local.name)}
         ECS_ENABLE_TASK_IAM_ROLE=true
         EOF
       EOT
@@ -130,7 +123,7 @@ module "autoscaling" {
         cat <<'EOF' >> /etc/ecs/ecs.config
         ECS_CLUSTER=${local.name}
         ECS_LOGLEVEL=debug
-        ECS_CONTAINER_INSTANCE_TAGS=${jsonencode(local.tags)}
+        ECS_CONTAINER_INSTANCE_TAGS=${jsonencode(local.name)}
         ECS_ENABLE_TASK_IAM_ROLE=true
         ECS_ENABLE_SPOT_INSTANCE_DRAINING=true
         EOF
@@ -147,7 +140,7 @@ module "autoscaling" {
   user_data                       = base64encode(each.value.user_data)
   ignore_desired_capacity_changes = true
 
-  create_iam_instance_profile = true
+  enable_iam_instance_profile = true
   iam_role_name               = local.name
   iam_role_description        = "ECS role for ${local.name}"
   iam_role_policies = {
@@ -172,5 +165,4 @@ module "autoscaling" {
   use_mixed_instances_policy = each.value.use_mixed_instances_policy
   mixed_instances_policy     = each.value.mixed_instances_policy
 
-  tags = local.tags
 }
