@@ -24,7 +24,7 @@ To use this module, you can include it in your Terraform configuration. Here's a
 ```hcl
 module "autoscaling" {
   source = "cypik/ec2-autoscaling/aws"
-  version = "1.0.1"
+  version = "1.0.0"
   #Launch template
   for_each = {
     # On-demand instances
