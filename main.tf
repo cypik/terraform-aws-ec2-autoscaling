@@ -1,16 +1,29 @@
 data "aws_partition" "current" {}
 
+module "labels" {
+  source      = "cypik/labels/aws"
+  version     = "1.0.2"
+  name        = var.name
+  repository  = var.repository
+  environment = var.environment
+  managedby   = var.managedby
+  attributes  = var.attributes
+  label_order = var.label_order
+}
+
+
 locals {
-  create = var.create && var.putin_khuylo
+  enabled = var.enable
 
   launch_template_name    = coalesce(var.launch_template_name, var.name)
-  launch_template_id      = var.create_launch_template ? aws_launch_template.this[0].id : var.launch_template_id
-  launch_template_version = var.create_launch_template && var.launch_template_version == null ? aws_launch_template.this[0].latest_version : var.launch_template_version
+  launch_template_id      = var.enable_launch_template ? aws_launch_template.main[0].id : var.launch_template_id
+  launch_template_version = var.enable_launch_template && var.launch_template_version == null ? aws_launch_template.main[0].latest_version : var.launch_template_version
 
   asg_tags = merge(
     var.tags,
     { "Name" = coalesce(var.instance_name, var.name) },
     var.autoscaling_group_tags,
+    module.labels.tags,
   )
 }
 
@@ -19,16 +32,17 @@ locals {
 ################################################################################
 
 locals {
-  iam_instance_profile_arn  = var.create_iam_instance_profile ? aws_iam_instance_profile.this[0].arn : var.iam_instance_profile_arn
-  iam_instance_profile_name = !var.create_iam_instance_profile && var.iam_instance_profile_arn == null ? var.iam_instance_profile_name : null
+  iam_instance_profile_arn  = var.enable_iam_instance_profile ? aws_iam_instance_profile.main[0].arn : var.iam_instance_profile_arn
+  iam_instance_profile_name = !var.enable_iam_instance_profile && var.iam_instance_profile_arn == null ? var.iam_instance_profile_name : null
 }
 
 #tfsec:ignore:aws-ec2-enforce-launch-config-http-token-imds
-resource "aws_launch_template" "this" {
-  count = var.create_launch_template ? 1 : 0
+resource "aws_launch_template" "main" {
+  count       = var.enable_launch_template ? 1 : 0
+  name        = var.launch_template_use_name_prefix ? null : format("%s%s", module.labels.id, )
+  name_prefix = var.launch_template_use_name_prefix ? null : format("%s%s-", module.labels.id, )
 
-  name        = var.launch_template_use_name_prefix ? null : local.launch_template_name
-  name_prefix = var.launch_template_use_name_prefix ? "${local.launch_template_name}-" : null
+
   description = var.launch_template_description
 
   ebs_optimized = var.ebs_optimized
@@ -36,7 +50,6 @@ resource "aws_launch_template" "this" {
   key_name      = var.key_name
   user_data     = var.user_data
 
-  # Ref: https://github.com/hashicorp/terraform-provider-aws/issues/4570
   vpc_security_group_ids = length(var.network_interfaces) > 0 ? [] : var.security_groups
 
   default_version                      = var.default_version
@@ -314,7 +327,11 @@ resource "aws_launch_template" "this" {
     for_each = var.tag_specifications
     content {
       resource_type = tag_specifications.value.resource_type
-      tags          = merge(var.tags, tag_specifications.value.tags)
+      tags = merge(
+        module.labels.tags,
+        var.tags
+      )
+
     }
   }
 
@@ -322,18 +339,22 @@ resource "aws_launch_template" "this" {
     create_before_destroy = true
   }
 
-  tags = var.tags
+  tags = merge(
+    module.labels.tags,
+    var.tags
+  )
 }
 
 ################################################################################
 # Autoscaling group - default
 ################################################################################
 
-resource "aws_autoscaling_group" "this" {
-  count = local.create && !var.ignore_desired_capacity_changes ? 1 : 0
+resource "aws_autoscaling_group" "main" {
+  count = local.enabled && !var.ignore_desired_capacity_changes ? 1 : 0
 
-  name        = var.use_name_prefix ? null : var.name
-  name_prefix = var.use_name_prefix ? "${var.name}-" : null
+  name        = format("%s%s", module.labels.id, var.use_name_prefix)
+  name_prefix = format("%s%s", module.labels.id, var.use_name_prefix)
+
 
   dynamic "launch_template" {
     for_each = var.use_mixed_instances_policy ? [] : [1]
@@ -597,10 +618,11 @@ resource "aws_autoscaling_group" "this" {
 ################################################################################
 
 resource "aws_autoscaling_group" "idc" {
-  count = local.create && var.ignore_desired_capacity_changes ? 1 : 0
+  count = local.enabled && var.ignore_desired_capacity_changes ? 1 : 0
 
-  name        = var.use_name_prefix ? null : var.name
-  name_prefix = var.use_name_prefix ? "${var.name}-" : null
+
+  name        = var.use_name_prefix ? null : format("%s%s", module.labels.id, )
+  name_prefix = var.use_name_prefix ? null : format("%s%s-", module.labels.id, )
 
   dynamic "launch_template" {
     for_each = var.use_mixed_instances_policy ? [] : [1]
@@ -864,11 +886,11 @@ resource "aws_autoscaling_group" "idc" {
 # Autoscaling group schedule
 ################################################################################
 
-resource "aws_autoscaling_schedule" "this" {
-  for_each = local.create && var.create_schedule ? var.schedules : {}
+resource "aws_autoscaling_schedule" "main" {
+  for_each = local.enabled && var.enable_schedule ? var.schedules : {}
 
   scheduled_action_name  = each.key
-  autoscaling_group_name = try(aws_autoscaling_group.this[0].name, aws_autoscaling_group.idc[0].name)
+  autoscaling_group_name = try(aws_autoscaling_group.main[0].name, aws_autoscaling_group.idc[0].name)
 
   min_size         = try(each.value.min_size, null)
   max_size         = try(each.value.max_size, null)
@@ -886,11 +908,11 @@ resource "aws_autoscaling_schedule" "this" {
 # Autoscaling Policy
 ################################################################################
 
-resource "aws_autoscaling_policy" "this" {
-  for_each = { for k, v in var.scaling_policies : k => v if local.create && var.create_scaling_policy }
+resource "aws_autoscaling_policy" "main" {
+  for_each = { for k, v in var.scaling_policies : k => v if local.enabled && var.enable_scaling_policy }
 
   name                   = try(each.value.name, each.key)
-  autoscaling_group_name = var.ignore_desired_capacity_changes ? aws_autoscaling_group.idc[0].name : aws_autoscaling_group.this[0].name
+  autoscaling_group_name = var.ignore_desired_capacity_changes ? aws_autoscaling_group.idc[0].name : aws_autoscaling_group.main[0].name
 
   adjustment_type           = try(each.value.adjustment_type, null)
   policy_type               = try(each.value.policy_type, null)
@@ -1036,7 +1058,7 @@ locals {
 }
 
 data "aws_iam_policy_document" "assume_role_policy" {
-  count = local.create && var.create_iam_instance_profile ? 1 : 0
+  count = local.enabled && var.enable_iam_instance_profile ? 1 : 0
 
   statement {
     sid     = "EC2AssumeRole"
@@ -1049,11 +1071,14 @@ data "aws_iam_policy_document" "assume_role_policy" {
   }
 }
 
-resource "aws_iam_role" "this" {
-  count = local.create && var.create_iam_instance_profile ? 1 : 0
+resource "aws_iam_role" "main" {
+  count = local.enabled && var.enable_iam_instance_profile ? 1 : 0
 
-  name        = var.iam_role_use_name_prefix ? null : local.internal_iam_instance_profile_name
-  name_prefix = var.iam_role_use_name_prefix ? "${local.internal_iam_instance_profile_name}-" : null
+  name        = var.iam_role_use_name_prefix ? null : format("%s-role", module.labels.id)
+  name_prefix = var.iam_role_use_name_prefix ? format("%s-role-", module.labels.id) : null
+
+
+
   path        = var.iam_role_path
   description = var.iam_role_description
 
@@ -1061,24 +1086,37 @@ resource "aws_iam_role" "this" {
   permissions_boundary  = var.iam_role_permissions_boundary
   force_detach_policies = true
 
-  tags = merge(var.tags, var.iam_role_tags)
+  tags = merge(
+    module.labels.tags,
+    var.tags
+  )
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
-resource "aws_iam_role_policy_attachment" "this" {
-  for_each = { for k, v in var.iam_role_policies : k => v if var.create && var.create_iam_instance_profile }
+resource "aws_iam_role_policy_attachment" "main" {
+  for_each = { for k, v in var.iam_role_policies : k => v if var.enable && var.enable_iam_instance_profile }
 
   policy_arn = each.value
-  role       = aws_iam_role.this[0].name
+  role       = aws_iam_role.main[0].name
 }
 
-resource "aws_iam_instance_profile" "this" {
-  count = local.create && var.create_iam_instance_profile ? 1 : 0
+resource "aws_iam_instance_profile" "main" {
+  count = local.enabled && var.enable_iam_instance_profile ? 1 : 0
 
-  role = aws_iam_role.this[0].name
+  role = aws_iam_role.main[0].name
 
-  name        = var.iam_role_use_name_prefix ? null : var.iam_role_name
-  name_prefix = var.iam_role_use_name_prefix ? "${var.iam_role_name}-" : null
-  path        = var.iam_role_path
+  name        = var.iam_role_use_name_prefix ? null : format("%s-role", module.labels.id)
+  name_prefix = var.iam_role_use_name_prefix ? format("%s-role-", module.labels.id) : null
 
-  tags = merge(var.tags, var.iam_role_tags)
+  path = var.iam_role_path
+
+  tags = merge(
+    module.labels.tags,
+    var.tags
+  )
+  lifecycle {
+    create_before_destroy = true
+  }
 }
