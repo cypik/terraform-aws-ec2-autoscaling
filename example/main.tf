@@ -7,7 +7,7 @@ data "aws_availability_zones" "available" {}
 locals {
   name        = "app"
   environment = "test"
-  region      = "eu-west-1"
+  region      = "eu-west-2"
   azs         = slice(data.aws_availability_zones.available.names, 0, 3)
 
   tags = {
@@ -23,17 +23,19 @@ locals {
 
 
 module "vpc" {
-  source      = "git::git@github.com:opz0/terraform-aws-vpc.git?ref=master"
+  source      = "cypik/vpc/aws"
+  version     = "1.0.3"
   name        = local.name
   environment = local.environment
   cidr_block  = "172.16.0.0/16"
 }
 
 module "subnets" {
-  source              = "git@github.com:opz0/terraform-aws-subnet.git"
+  source              = "cypik/subnet/aws"
+  version             = "1.0.5"
   nat_gateway_enabled = true
   single_nat_gateway  = true
-  availability_zones  = ["eu-west-1a", "eu-west-1b", "eu-west-1c"]
+  availability_zones  = ["eu-west-2a", "eu-west-2b", "eu-west-2c"]
   vpc_id              = module.vpc.vpc_id
   type                = "public-private"
   igw_id              = module.vpc.igw_id
@@ -42,7 +44,8 @@ module "subnets" {
 
 
 module "security_group" {
-  source      = "git@github.com:opz0/terraform-aws-security-group.git"
+  source      = "cypik/security-group/aws"
+  version     = "1.0.1"
   name        = local.name
   environment = local.environment
   vpc_id      = module.vpc.vpc_id
