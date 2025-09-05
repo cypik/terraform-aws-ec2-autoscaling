@@ -38,7 +38,7 @@ module "subnets" {
 
 module "security_group" {
   source      = "cypik/security-group/aws"
-  version     = "1.0.1"
+  version     = "1.0.3"
   name        = local.name
   environment = local.environment
   vpc_id      = module.vpc.vpc_id
