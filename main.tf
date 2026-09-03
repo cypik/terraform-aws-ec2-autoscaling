@@ -2,7 +2,7 @@ data "aws_partition" "current" {}
 
 module "labels" {
   source      = "cypik/labels/aws"
-  version     = "1.0.2"
+  version     = "1.0.4"
   name        = var.name
   repository  = var.repository
   environment = var.environment
@@ -15,7 +15,6 @@ module "labels" {
 locals {
   enabled = var.enable
 
-  launch_template_name    = coalesce(var.launch_template_name, var.name)
   launch_template_id      = var.enable_launch_template ? aws_launch_template.main[0].id : var.launch_template_id
   launch_template_version = var.enable_launch_template && var.launch_template_version == null ? aws_launch_template.main[0].latest_version : var.launch_template_version
 
@@ -1052,10 +1051,6 @@ resource "aws_autoscaling_policy" "main" {
 ################################################################################
 # IAM Role / Instance Profile
 ################################################################################
-
-locals {
-  internal_iam_instance_profile_name = try(coalesce(var.iam_instance_profile_name, var.iam_role_name), "")
-}
 
 data "aws_iam_policy_document" "assume_role_policy" {
   count = local.enabled && var.enable_iam_instance_profile ? 1 : 0
