@@ -6,18 +6,12 @@ locals {
   name        = "app"
   environment = "test"
   region      = "eu-west-2"
-
-
-  user_data = <<-EOT
-    #!/bin/bash
-    echo "Hello Terraform!"
-  EOT
 }
 
 
 module "vpc" {
   source      = "cypik/vpc/aws"
-  version     = "1.0.3"
+  version     = "1.0.5"
   name        = local.name
   environment = local.environment
   cidr_block  = "172.16.0.0/16"
@@ -25,7 +19,7 @@ module "vpc" {
 
 module "subnets" {
   source              = "cypik/subnet/aws"
-  version             = "1.0.5"
+  version             = "1.0.7"
   nat_gateway_enabled = true
   single_nat_gateway  = true
   availability_zones  = ["eu-west-2a", "eu-west-2b", "eu-west-2c"]
@@ -38,7 +32,7 @@ module "subnets" {
 
 module "security_group" {
   source      = "cypik/security-group/aws"
-  version     = "1.0.1"
+  version     = "1.0.4"
   name        = local.name
   environment = local.environment
   vpc_id      = module.vpc.vpc_id
@@ -141,7 +135,6 @@ module "autoscaling" {
   ignore_desired_capacity_changes = true
 
   enable_iam_instance_profile = true
-  iam_role_name               = local.name
   iam_role_description        = "ECS role for ${local.name}"
   iam_role_policies = {
     AmazonEC2ContainerServiceforEC2Role = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
